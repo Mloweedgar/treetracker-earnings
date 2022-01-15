@@ -18,6 +18,7 @@ const HttpError = require('../utils/HttpError');
 
 const earningsGetQuerySchema = Joi.object({
   earnings_status: Joi.string(),
+  grower: Joi.string(),
   funder_id: Joi.string().uuid(),
   worker_id: Joi.string().uuid(),
   contract_id: Joi.string().uuid(),
@@ -42,8 +43,8 @@ const earningsPatchSchema = Joi.object({
   worker_id: Joi.string().uuid().required(),
   amount: Joi.number().required(),
   currency: Joi.string().required(),
-  payment_confirmation_id: Joi.string().required(),
-  payment_system: Joi.string().required(),
+  payment_confirmation_id: Joi.string(),
+  payment_system: Joi.string(),
   paid_at: Joi.date().iso(),
   phone: Joi.string(),
 }).xor('id', 'earnings_id');
@@ -117,6 +118,7 @@ const earningsBatchPatch = async (req, res, next) => {
   const key = `treetracker_earnings/${new Date().toISOString()}_${uuid()}.csv`;
   const fileBuffer = await fs.promises.readFile(req.file.path);
   const csvReadStream = fs.createReadStream(req.file.path);
+  console.log('file path---------', req.file.path)
   const session = new Session();
   // Don't want to roll back batch updates if system errors out
   const batchSession = new Session();
@@ -124,19 +126,20 @@ const earningsBatchPatch = async (req, res, next) => {
   const earningsRepo = new EarningsRepository(session);
   let batch_id = '';
 
-  const batchUpdateEarnings = (batch_id) => {
+  const batchUpdateEarnings = () => {
     let count = 0;
     return new Promise((resolve, reject) => {
+
       csv()
         .fromStream(csvReadStream)
         .subscribe(
           async (json) => {
-            await earningsPatchSchema.validateAsync(json, {
-              abortEarly: false,
-            });
+            console.log('the json---------', json);
+            // await earningsPatchSchema.validateAsync(json, {
+            //   abortEarly: false,
+            // });
             await updateEarnings(earningsRepo, {
               ...json,
-              batch_id,
             });
             count++;
           },
@@ -150,24 +153,24 @@ const earningsBatchPatch = async (req, res, next) => {
     });
   };
   try {
-    const uploadResult = await uploadCsv(fileBuffer, key);
+    // const uploadResult = await uploadCsv(fileBuffer, key);
 
-    const batch = await batchRepo.create({
-      url: uploadResult.Location,
-      status: 'created',
-      active: true,
-    });
-    batch_id = batch.id;
+    // const batch = await batchRepo.create({
+    //   url: 'http://example.com/csv', // TODO: replace with actual url
+    //   status: 'created',
+    //   active: true,
+    // });
+    // batch_id = batch.id;
 
     await session.beginTransaction();
 
-    const count = await batchUpdateEarnings(batch.id);
+    const count = await batchUpdateEarnings();
 
     // delete temp file
     await fs.promises.unlink(req.file.path);
 
     // update batch status to completed
-    await batchRepo.update({ id: batch.id, status: 'completed' });
+    // await batchRepo.update({ id: batch.id, status: 'completed' });
 
     await session.commitTransaction();
     res.status(200).send({
