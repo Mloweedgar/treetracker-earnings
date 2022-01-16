@@ -19,6 +19,7 @@ const HttpError = require('../utils/HttpError');
 const earningsGetQuerySchema = Joi.object({
   earnings_status: Joi.string(),
   grower: Joi.string(),
+  phone: Joi.string(),
   funder_id: Joi.string().uuid(),
   worker_id: Joi.string().uuid(),
   contract_id: Joi.string().uuid(),
@@ -124,7 +125,7 @@ const earningsBatchPatch = async (req, res, next) => {
   const batchSession = new Session();
   const batchRepo = new BatchRepository(batchSession);
   const earningsRepo = new EarningsRepository(session);
-  let batch_id = '';
+  const batch_id = '';
 
   const batchUpdateEarnings = () => {
     let count = 0;
