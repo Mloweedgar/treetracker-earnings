@@ -193,7 +193,8 @@ const getEarnings =
 
             if (filterCriteria?.grower || filterCriteria?.phone) {
                 const filterFormattedEarnings = formattedEarnings
-                    .filter(({grower}) => grower.includes(filterCriteria?.grower))
+                    .filter(({grower}) => filterCriteria?.grower ? grower.includes(filterCriteria?.grower): true)
+                    .filter(({phone}) => filterCriteria?.phone ? phone.includes(filterCriteria?.phone) : true)
 
                 return {
                     earnings: filterFormattedEarnings,
